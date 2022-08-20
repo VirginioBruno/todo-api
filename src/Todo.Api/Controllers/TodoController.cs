@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Todo.Api.Contracts;
 using Todo.Api.Models;
+using Todo.Api.Repositories;
 
 namespace Todo.Api.Controllers;
 
@@ -7,13 +9,13 @@ namespace Todo.Api.Controllers;
 [Route("[controller]")]
 public class TodoController : ControllerBase
 {
-    private readonly ILogger<TodoController> logger;
-    private readonly ApplicationDbContext context;
+    private readonly ILogger<TodoController> _logger;
+    private readonly ITodoRepository _repository;
 
-    public TodoController(ILogger<TodoController> logger, ApplicationDbContext context)
+    public TodoController(ILogger<TodoController> logger, ITodoRepository repository)
     {
-        this.logger = logger;
-        this.context = context;
+        _logger = logger;
+        _repository = repository;
     }
 
     [HttpPost]
@@ -24,21 +26,19 @@ public class TodoController : ControllerBase
     {
         try
         {
-            var todo = new Models.Todo()
+            var todo = new Models.Todo
             {
                 Id = Guid.NewGuid(),
                 Title = request.Title,
                 Description = request.Description
             };
-
-            context.Todos.Add(todo);
-            context.SaveChanges();
-
+            
+            _repository.Store(todo);
             return StatusCode(StatusCodes.Status201Created, todo);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex.Message);
+            _logger.LogError(ex, "It was not possible to create the task");
             return StatusCode(StatusCodes.Status500InternalServerError, "It was not possible to create the task");
         }
     }
