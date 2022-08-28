@@ -8,4 +8,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.8" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="AppSettings.cs" />
+  </ItemGroup>
 </Project>

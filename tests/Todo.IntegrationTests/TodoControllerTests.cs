@@ -1,24 +1,25 @@
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Todo.Api.Contracts;
-using Todo.Api.Controllers;
 using Todo.Api.Repositories;
 
 namespace Todo.IntegrationTests;
 
-public class TodoControllerTests
+public class TodoControllerTests : IntegrationTestBase
 {
-    private readonly TodoController _controller;
-    public TodoControllerTests()
+    public TodoControllerTests(TestWebApplicationFactory factory) : base(factory)
     {
-        _controller = new TodoController(new Mock<ILogger<TodoController>>().Object, new Mock<ITodoRepository>().Object);
     }
     
     [Fact]
-    public void Create_Should_CreateSuccessfully()
+    public async Task Create_Should_CreateSuccessfully()
     {
         //Arrange
+        using var scope = Factory.Services.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ITodoRepository>();
+        
         var request = new CreateTodoContract()
         {
             Description = "Test",
@@ -26,9 +27,17 @@ public class TodoControllerTests
         };
 
         //Act
-        var result = _controller.Create(request);
+        var response = await Client.PostAsJsonAsync("/Todo", request);
 
         //Assert
-        result.Result.As<ObjectResult>().StatusCode.Should().Be(StatusCodes.Status201Created);
+        response.EnsureSuccessStatusCode();
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var todo = await response.Content.ReadFromJsonAsync<Api.Models.Todo>();
+        var storedTodo = repository.GetById(todo.Id);
+
+        storedTodo.Should().NotBeNull();
+        storedTodo.Description.Should().Be(request.Description);
+        storedTodo.Title.Should().Be(request.Title);
     }
 }
